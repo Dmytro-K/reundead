@@ -17,10 +17,9 @@ void main()
 
 	auto a = react( 3 );
 	auto b = react( 5 );
-	auto c = react( [&a, &b]( const ReactBase::Args &args ) -> int {
-		//return ( ( React<int>* )( args.args[0] ) )->value() + ( ( React<int>* )( args.args[1] ) )->value();
+	auto c = react( []( auto &a, auto &b ) -> int  {
 		return a.value() + b.value();
-	}, { &a,&b } );
+	}, a, b );
 
 	cout << "a = " << a.value() << endl;
 
