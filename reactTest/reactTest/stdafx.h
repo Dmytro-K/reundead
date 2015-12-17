@@ -32,65 +32,19 @@ struct remove_const_in_ptr
 #define DBGLINE()
 #endif
 
-template<typename F, typename Tuple, bool Enough, int TotalArgs, int... N>
-struct call_impl
+// helper class
+template<typename R, template<typename...> class Params, typename... Args, std::size_t... I>
+R call_helper( std::function<R( Args... )> const&func, Params<Args...> const&params, std::index_sequence<I...> )
 {
-	auto static call( F f, Tuple&& t )
-	{
-		return call_impl<F, Tuple, TotalArgs == 1 + sizeof...( N ),
-			TotalArgs, N..., sizeof...( N )
-		>::call( f, std::forward<Tuple>( t ) );
-	}
-};
-
-template<typename F, typename Tuple, int TotalArgs, int... N>
-struct call_impl<F, Tuple, true, TotalArgs, N...>
-{
-	auto static call( F f, Tuple&& t )
-	{
-		return f( std::get<N>( std::forward<Tuple>( t ) )... );
-	}
-};
-
-template<typename F, typename Tuple>
-auto call( F f, Tuple&& t )
-{
-	typedef typename std::decay<Tuple>::type type;
-	return call_impl<F, Tuple, 0 == std::tuple_size<type>::value,
-		std::tuple_size<type>::value
-	>::call( f, std::forward<Tuple>( t ) );
+	return func( std::get<I>( params )... );
 }
 
-template<std::size_t N>
-struct tuple_functor
+// "return func(params...)"
+template<typename R, template<typename...> class Params, typename... Args>
+R call( std::function<R( Args... )> const&func, Params<Args...> const&params )
 {
-	template<typename T, typename F>
-	static void run( std::size_t i, T&& t, F&& f )
-	{
-		const std::size_t I = ( N - 1 );
-		switch( i ) {
-			case I:
-				std::forward<F>( f )( std::get<I>( std::forward<T>( t ) ) );
-				break;
-
-			default:
-				tuple_functor<I>::run( i, std::forward<T>( t ), std::forward<F>( f ) );
-		}
-	}
-};
-
-template<>
-struct tuple_functor<0>
-{
-	template<typename T, typename F>
-	static void run( std::size_t, T, F )
-	{
-	}
-};
-
-
-
-
+	return call_helper( func, params, std::index_sequence_for<Args...>{} );
+}
 
 template <size_t I>
 struct visit_impl
@@ -124,8 +78,5 @@ void visit_at( std::tuple<Ts...>& tup, size_t idx, F fun )
 {
 	visit_impl<sizeof...( Ts )>::visit( tup, idx, fun );
 }
-
-
-
 
 #endif /* IS_STDAFX_H */
